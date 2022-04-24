@@ -11,8 +11,8 @@ const successHandler = ( response, data) => {
 
 const errorHandler = (response, statusCode = 500 , message = '有錯誤') => {
   response.writeHead( statusCode, HEADERS)
-  response.writeHead(JSON.stringify({
-    status : false,
+  response.write(JSON.stringify({
+    status : 'false',
     message
   }))
   response.end()
