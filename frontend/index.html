@@ -39,11 +39,11 @@
                 </div>
                 <div class="mb-3">
                     <label for="avatar" class="form-label">上傳圖像</label>
-                    <input type="text" class="form-control" id="avatar">
+                    <input placeholder="請輸入網址" type="text" class="form-control" id="avatar">
                 </div>
                 <div class="mb-3">
                     <label for="image" class="form-label">貼文圖片</label>
-                    <input type="text" class="form-control" id="image">
+                    <input placeholder="請輸入網址"  type="text" class="form-control" id="image">
                 </div>
                 <button type="submit" class="btn btn-primary">新增貼文</button>
             </form>
@@ -74,6 +74,7 @@
             </li>
         </ul>
     </section>
+    <footer class="p-5 bg-dark"></footer>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.26.1/axios.min.js" integrity="sha512-bPh3uwgU5qEMipS/VOmRqynnMXGGSRv+72H/N260MQeXZIK4PG48401Bsby9Nq5P5fz7hy5UGNmC/W1Z51h2GQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script>
@@ -84,11 +85,18 @@
         const list = document.querySelector('#list')
         const addPostForm = document.querySelector('.addPostForm')
         const deleteAllBtn = document.querySelector('.deleteAllBtn')
-        
+        const listDom = document.querySelector('#list')
         const base_url_post = 'https://posts-kata.herokuapp.com/posts'
-        
+        const deleteBtn = document.querySelector('.deleteBtn')
+
+        // 當下的資料
+        let currentData = []
+
         addPostForm.addEventListener('submit', addPostFormHandler)
         deleteAllBtn.addEventListener('click', deleteAllHandler)
+        // 動態監聽 刪除修改按鈕
+        listDom.addEventListener('click' , listClickHandler)
+
 
         init()
 
@@ -99,25 +107,44 @@
         async function getList(){
             const resJson = await fetch(base_url_post)
             const {data} = await resJson.json()
+            currentData = data
             renderList(data)
         }
         function renderList(data){
             let str = ''
             if(data.length > 0){
-                data.forEach( ({avatar, content, createdAt, image, likes, name}) => {
+                data.forEach( ({avatar, content, createdAt, image, likes, name, _id}) => {
                     str += `
-                        <li class="bg-light border-bottom p-3">
+                        <li class="post-item bg-light border-bottom p-3">
                             <div class="d-flex mb-2">
                                 <div class="avatar flex-shrink-0 overflow-hidden rounded-circle">
                                     <img width="96" height="96" src="${avatar}" alt="">
                                 </div>
-                                <div class="flex-grow-1 ms-3 align-self-center">
-                                    ${name}
+                                <div class="edit flex-grow-1 ms-3 align-self-center">
+                                    <div class="txt">
+                                        ${name}
+                                    </div>        
+                                    <div class="edit-item d-none">
+                                        <input type="text" class="name form-control">
+                                    </div>
                                 </div>
-                                <button class="align-self-center btn btn-outline-danger ms-auto">刪除貼文</button>
+                                <div class="txt">
+                                    <button data-id="${_id}" class="editBtn align-self-center btn btn-outline-primary ms-auto me-2">修改貼文</button>
+                                    <button data-id="${_id}" class="deleteBtn align-self-center btn btn-outline-danger ms-auto">刪除貼文</button>
+                                </div>
+                                <div class="edit-item d-none">
+                                    <button data-id="${_id}" class="confirmBtn align-self-center btn btn-outline-primary ms-auto me-2">確定</button>
+                                    <button class="cancelBtn align-self-center btn btn-outline-danger ms-auto">取消</button>
+                                </div>
+
                             </div>
-                            <div class="mb-2">
-                                ${content}
+                            <div class="edit mb-2">
+                                <div class="txt">
+                                    ${content}
+                                </div>        
+                                <div class="edit-item d-none">
+                                    <textarea class="content form-control">${content}</textarea>
+                                </div>
                             </div>
                             <div>
                                 <img src="${image}" class="img-fluid" alt="">
@@ -130,7 +157,7 @@
                 })
             }else{
                 str += `
-                    <li class="text-center p-3"> 沒有內容 </li>
+                    <li class="text-center p-5"> 沒有內容 </li>
                 `
             }
             
@@ -170,7 +197,63 @@
                 console.log(error)
             }
         }
+        
+        function resetEdit(){
+            // 將狀況回復
+            document.querySelectorAll('.edit-item').forEach( item => item.classList.add('d-none') )
+            document.querySelectorAll('.txt').forEach( item => item.classList.remove('d-none') )
+        }
+        async function listClickHandler(e){
+            if(e.target.classList.contains('deleteBtn')){
+                // 刪除按鈕
+                try {
+                    const {id} = e.target.dataset
+                    const {data} = await axios.delete(`${base_url_post}\\${id}`)
+                    alert(data.data)
+                    getList()
+                } catch (error) {
+                    console.log(error)
+                }
+            }else if(e.target.classList.contains('editBtn')){
+                resetEdit()
+                // 修改按鈕
+                const {id} = e.target.dataset
+                const parent = e.target.closest('li')
+                parent.querySelectorAll('.edit-item').forEach( item => item.classList.remove('d-none') )
+                parent.querySelectorAll('.txt').forEach( item => item.classList.add('d-none') )
 
+                // 寫入值
+                const { name, content } = currentData.find( item => item._id === id)
+                
+                parent.querySelector('.name').value = name
+                parent.querySelector('.content').value = content
+
+            }else if(e.target.classList.contains('cancelBtn')){
+                resetEdit()
+            }else if(e.target.classList.contains('confirmBtn')){
+                console.log('confirm');
+                try {
+                const parent = e.target.closest('li')
+                const nameVal = parent.querySelector('.name').value.trim() 
+                const contentVal = parent.querySelector('.content').value.trim() 
+                const {id} = e.target.dataset
+
+                const params = {
+                    name : nameVal,
+                    content : contentVal
+                }
+                    const result = axios.patch(`${base_url_post}\\${id}` , params )
+                    getList()
+                    resetEdit()
+                } catch (error) {
+                    console.log(error);
+                    resetEdit()
+                }
+            }else{
+                console.log('其他');
+            }
+            
+        }
     </script>
 </body>
 </html>
